@@ -244,8 +244,6 @@ void main(string[] args)
         
     char[4096] fileNameBuffer;
     auto sourceFileName = format!"{0}"(fileNameBuffer, args[1]);
-    import core.stdc.stdio;
-    printf("Stating filename: %s\n", fileNameBuffer.ptr);
     char[256] modDateBuffer;
     auto modDate = getModDate(sourceFileName, modDateBuffer);
     
@@ -281,7 +279,7 @@ void main(string[] args)
     char[] frontmatterEnd = cast(char[])"<!--frontmatter--->";
     foreach(head; 0 .. reader.length)
     {
-        if (stringsMatch(frontmatterEnd.ptr, &reader[head]))
+        if (stringBeginsWith(frontmatterEnd.ptr, &reader[head]))
         {
             frontmatterString = reader[0 .. head];
             reader = reader[head + frontmatterEnd.length .. reader.length];
@@ -336,7 +334,7 @@ void main(string[] args)
     }
     
     printFile!pageTop(destFile, frontmatter.title, frontmatter.base);
-    if (stringsMatchIgnoreCase("freelanceCosmonaut".ptr, frontmatter.layout.ptr))
+    if (stringBeginsWithIgnoreCase("freelanceCosmonaut".ptr, frontmatter.layout.ptr))
     {
         printFile!freelanceCosmonautHead(destFile);
     }
@@ -349,7 +347,7 @@ void main(string[] args)
     for(size_t i = 0; i < navItems.length - 1; i += 2)
     {
         printFile!"\t<li><a href='{0}{1}'"(destFile, frontmatter.base, navItems[i]);
-        if (frontmatter.section.length > 0 && stringsMatchIgnoreCase(navItems[i + 1].ptr, frontmatter.section.ptr))
+        if (frontmatter.section.length > 0 && stringBeginsWithIgnoreCase(navItems[i + 1].ptr, frontmatter.section.ptr))
         {
             printFile!" class='highlight-nav'"(destFile);
         }
@@ -360,23 +358,23 @@ void main(string[] args)
     printFile!"<div id=\"wrapper\">\n"(destFile);
     printFile!contentHeading(destFile, frontmatter.base);
     
-    if (stringsMatchIgnoreCase("chapter", frontmatter.layout.ptr))
+    if (stringBeginsWithIgnoreCase("chapter", frontmatter.layout.ptr))
     {
         printFile!"<h2>{0}</h2>\n"(destFile, frontmatter.series);
         printFile!chapterNav(destFile, frontmatter.prevPage, frontmatter.chapterIndex, frontmatter.nextPage);
     }
-    else if (stringsMatchIgnoreCase("resources", frontmatter.layout.ptr))
+    else if (stringBeginsWithIgnoreCase("resources", frontmatter.layout.ptr))
     {
         printResourceNav(destFile, frontmatter);
     }
     
     processFileContent(destFile, reader);
 
-    if (stringsMatchIgnoreCase("chapter", frontmatter.layout.ptr))
+    if (stringBeginsWithIgnoreCase("chapter", frontmatter.layout.ptr))
     {
         printFile!chapterNav(destFile, frontmatter.prevPage, frontmatter.chapterIndex, frontmatter.nextPage);
     }
-    else if (stringsMatchIgnoreCase("resources", frontmatter.layout.ptr))
+    else if (stringBeginsWithIgnoreCase("resources", frontmatter.layout.ptr))
     {
         printResourceNav(destFile, frontmatter);
     }
@@ -395,7 +393,7 @@ void printResourceNav(int destFile, Frontmatter frontmatter)
     for(int i = 0; i < resourcesItems.length; i += 2)
     {
         printFile!"\t<li><a href='{0}{1}'"(destFile, frontmatter.base, resourcesItems[i]);
-        if (stringsMatchIgnoreCase(resourcesItems[i + 1].ptr, frontmatter.resource.ptr))
+        if (stringBeginsWithIgnoreCase(resourcesItems[i + 1].ptr, frontmatter.resource.ptr))
         {
             printFile!" class='highlight-nav'"(destFile);
         }
@@ -404,7 +402,7 @@ void printResourceNav(int destFile, Frontmatter frontmatter)
     printFile!"</ul></div>\n"(destFile);
 }
 
-bool stringsMatchIgnoreCase(const char* a, const char* b)
+bool stringBeginsWithIgnoreCase(const char* a, const char* b)
 {    
     size_t i = 0;
     while(a[i] != '\0')
@@ -416,7 +414,7 @@ bool stringsMatchIgnoreCase(const char* a, const char* b)
     return true;
 }
 
-bool stringsMatch(const char* a, const char* b)
+bool stringBeginsWith(const char* a, const char* b)
 {    
     size_t i = 0;
     while(a[i] != '\0')
@@ -428,7 +426,7 @@ bool stringsMatch(const char* a, const char* b)
     return true;
 }
 
-bool stringsMatch(char[] a, const char* b)
+bool stringBeginsWith(char[] a, const char* b)
 {   
     size_t i = 0;
     while(b[i] != '\0')
@@ -436,6 +434,18 @@ bool stringsMatch(char[] a, const char* b)
         if (i >= a.length) return false;
         if (a[i] != b[i]) return false;
         i++;
+    }
+    
+    return true;
+}
+
+bool stringsMatch(const char[] a, const char[] b)
+{
+    if(a.length != b.length) return false;
+    
+    foreach(i; 0 .. a.length)
+    {
+        if(a[i] != b[i]) return false;
     }
     
     return true;
@@ -609,7 +619,7 @@ void processFrontmatter(ref char[] reader, Frontmatter* frontmatter)
     {
         static foreach(member; __traits(allMembers, Frontmatter))
         {            
-            if(stringsMatchIgnoreCase(member, key.text.ptr))
+            if(stringBeginsWithIgnoreCase(member, key.text.ptr))
             {
                 if (value.text.length >= 2)
                 {
@@ -646,7 +656,7 @@ bool isKeyword(char[] s, string[] keywords)
 {
     foreach(ref keyword; keywords)
     {
-        if(stringsMatch(keyword.ptr, s.ptr)) return true;
+        if(stringsMatch(cast(char[])keyword, s)) return true;
     }
     
     return false;
@@ -703,14 +713,14 @@ void processFileContent(int destFile, ref char[] reader)
     size_t head = 0;
     while(head < reader.length)
     {
-        if(stringsMatch(codeBegin, &reader[head]))
+        if(stringBeginsWith(codeBegin, &reader[head]))
         {
             head += codeBegin.length;
             
             char[] codeTagContents = reader[codeBegin.length .. $];
             while(head < reader.length)
             {
-                if (stringsMatch(">", &reader[head]))
+                if (stringBeginsWith(">", &reader[head]))
                 {
                     codeTagContents = reader[codeBegin.length .. head];
                     head++;
@@ -728,9 +738,9 @@ void processFileContent(int destFile, ref char[] reader)
             char[] language = cast(char[])"d";
         
             auto token = nextToken(codeTagContents);
-            while(token.text.length > 0 && !stringsMatch(">", token.text.ptr))
+            while(token.text.length > 0 && !stringBeginsWith(">", token.text.ptr))
             {
-                if(stringsMatch("class", token.text.ptr))
+                if(stringBeginsWith("class", token.text.ptr))
                 {
                     nextToken(codeTagContents); // NOTE: Skip the equals sign after the class attribute
                     token = nextToken(codeTagContents);
@@ -746,17 +756,17 @@ void processFileContent(int destFile, ref char[] reader)
             }
             
             string[] keywords = dKeywords;
-            if(stringsMatch("d", language.ptr))
+            if(stringBeginsWith("d", language.ptr))
             {
                 keywords = dKeywords;
             }
-            else if(stringsMatch("c++", language.ptr))
+            else if(stringBeginsWith("c++", language.ptr))
             {
                 keywords = cppKeywords;
             }
             
             head = 0;
-            while(head < reader.length && !stringsMatch(codeEnd, &reader[head]))
+            while(head < reader.length && !stringBeginsWith(codeEnd, &reader[head]))
             {
                 head++;
             }
