@@ -8,6 +8,6 @@ This is a simple static site generator created to replace Jekyll as the tool for
 
 This software is designed for a singular purpose. As an application, I expect few will find it useful. As source code, I hope its simplicity will inspire other software developers to build their own utilities.
 
-##License
+## License
 
 This software is licensed under the BSD Zero Clause License. See [LICENSE.txt](LICENSE.txt) for more information.
